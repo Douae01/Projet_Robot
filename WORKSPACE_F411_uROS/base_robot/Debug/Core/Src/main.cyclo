@@ -1,8 +1,8 @@
-../Core/Src/main.c:77:13:task_A	1
-../Core/Src/main.c:107:13:task_B	1
-../Core/Src/main.c:135:13:task_C	1
-../Core/Src/main.c:214:5:main	5
-../Core/Src/main.c:333:6:subscription_callback	1
-../Core/Src/main.c:342:6:microros_task	3
-../Core/Src/main.c:414:6:HAL_TIM_PeriodElapsedCallback	2
-../Core/Src/main.c:423:6:Error_Handler	1
+../Core/Src/main.c:77:13:task_A	5
+../Core/Src/main.c:121:13:task_B	5
+../Core/Src/main.c:162:13:task_C	1
+../Core/Src/main.c:241:5:main	5
+../Core/Src/main.c:360:6:subscription_callback	1
+../Core/Src/main.c:369:6:microros_task	3
+../Core/Src/main.c:441:6:HAL_TIM_PeriodElapsedCallback	2
+../Core/Src/main.c:450:6:Error_Handler	1

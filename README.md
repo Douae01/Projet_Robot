@@ -9,7 +9,7 @@
 
 ## Composants utilisés dans ce projet
 
-- **STM32 Nucleo F411** : responsable sur la gestion de la commande des moteurs en boucle fermée, l'acquisition des capteurs de distance, l'affichage sur l'écran LCD et la communication avec le Raspberry Pi.
+- **STM32 Nucleo F411** : responsable sur la gestion de la commande des moteurs en boucle fermée, l'acquisition des capteurs de distance, l'affichage sur l'écran LCD (Mode de fonctionnement 'Manuel/Aléatoire/Suivi') et la communication avec le Raspberry Pi.
 
 - **Raspberry Pi** : permettant l'acquisition de l'image de la Webcam, le traitement de l'image de la Webcam et la communication avec le PC via la liaison WIFI.
 

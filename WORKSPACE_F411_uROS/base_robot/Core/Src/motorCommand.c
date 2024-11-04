@@ -7,6 +7,7 @@
 static TIM_HandleTypeDef    TimHandle;
 static TIM_OC_InitTypeDef   sConfigOC;
 
+RobotState robot_state = STOPPED;
 //=================================================================
 //			PWM INIT
 // TIMER 3 (PWM)  : CH1 et CH2
@@ -68,18 +69,32 @@ void motorRight_SetDuty(int duty)
 
 //RobotState robot_state = STOPPED;
 
-void onMoveForward(int duty) {
-	motorRight_SetDuty(duty);
-	motorLeft_SetDuty(-duty);
+void onMoveForward(int index,int consigne) {
+	if(index==1){
+		motorRight_SetDuty(-(consigne+100));
+	}
+	else if(index==2){
+		motorLeft_SetDuty(consigne+100);
+	}
+    robot_state = MOVING_FORWARD;
 }
 
-void onMoveBackward(int duty) {
-	motorRight_SetDuty(-duty);
-	motorLeft_SetDuty(duty);
+void onMoveBackward(int index,int consigne) {
+	if(index==1){
+		motorRight_SetDuty(consigne+100);
+	}
+	else if(index==2){
+		motorLeft_SetDuty(-(consigne+100)); //centrer le rapport cyclique, ce qui place les moteurs au repos si duty = 100
+	}
+    robot_state = MOVING_BACKWARD;
 }
 
-void stopMoving(int duty) {
-	motorRight_SetDuty(duty);
-	motorLeft_SetDuty(duty);
+void stopMoving(int index) {
+	if(index==1){
+		motorRight_SetDuty(0);
+	}
+	else if(index==2){
+		motorLeft_SetDuty(0);
+	}
+    robot_state = STOPPED;
 }
-

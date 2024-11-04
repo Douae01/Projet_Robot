@@ -1,6 +1,6 @@
-../Core/Src/motorCommand.c:16:6:motorCommand_Init	1
-../Core/Src/motorCommand.c:55:6:motorLeft_SetDuty	1
-../Core/Src/motorCommand.c:62:6:motorRight_SetDuty	1
-../Core/Src/motorCommand.c:71:6:onMoveForward	1
-../Core/Src/motorCommand.c:76:6:onMoveBackward	1
-../Core/Src/motorCommand.c:81:6:stopMoving	1
+../Core/Src/motorCommand.c:17:6:motorCommand_Init	1
+../Core/Src/motorCommand.c:56:6:motorLeft_SetDuty	1
+../Core/Src/motorCommand.c:63:6:motorRight_SetDuty	1
+../Core/Src/motorCommand.c:72:6:onMoveForward	3
+../Core/Src/motorCommand.c:82:6:onMoveBackward	3
+../Core/Src/motorCommand.c:92:6:stopMoving	3

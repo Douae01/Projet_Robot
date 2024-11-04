@@ -96,7 +96,21 @@ static void task_A(void *pvParameters)
 		proportionalComponent_L=Kp_L*(float)err_L;
 		integralComponent_L=integralComponent_L+Kp_L*Ki_L*(float)err_L;
 		consigne = (int)(proportionalComponent_L+integralComponent_L);
-		motorLeft_SetDuty(consigne+100); //centrer le rapport cyclique, ce qui place les moteurs au repos si duty = 100
+
+		switch(pxLMessage.command){
+			case 'f':
+				onMoveForward(2,consigne);
+				break;
+			case 'b':
+				onMoveBackward(2,consigne);
+				break;
+			case 's':
+				stopMoving(2);
+				break;
+			default:
+				break;
+		}
+
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
 		vTaskDelay(5);
@@ -124,7 +138,20 @@ static void task_B(void *pvParameters)
 		proportionalComponent_R=Kp_R*(float)err_R;
 		integralComponent_R=integralComponent_R+Kp_R*Ki_R*(float)err_R;
 		consigne = (int)(proportionalComponent_R+integralComponent_R);
-		motorRight_SetDuty(consigne+100);
+
+		switch(pxRMessage.command){
+			case 'f':
+				onMoveForward(1,consigne);
+				break;
+			case 'b':
+				onMoveBackward(1,consigne);
+				break;
+			case 's':
+				stopMoving(1);
+				break;
+			default:
+				break;
+		}
 
 		xSemaphoreGive( xSemaphore );
 		vTaskDelay(5);
@@ -135,8 +162,8 @@ static void task_B(void *pvParameters)
 static void task_C( void *pvParameters )
 {
 	struct AMessage pxMessage;
-	pxMessage.command='f';
-	pxMessage.data=1000;
+	pxMessage.command='s';
+	pxMessage.data=100;
 	vTaskDelay(1000); // attendre 1s
 
 	// envoi régulier des ordres de mise à jour
@@ -289,7 +316,7 @@ int main(void)
 
   osKernelInitialize();
 
-  //xTaskCreate( microros_task, ( const portCHAR * ) "microros_task", 3000 /* stack size */, NULL,  24, NULL );
+  xTaskCreate( microros_task, ( const portCHAR * ) "microros_task", 3000 /* stack size */, NULL,  24, NULL );
 #if SYNCHRO_EX == EX1
 	xTaskCreate( task_A, ( const portCHAR * ) "task A", 128 /* stack size */, NULL, 26, NULL );
 	xTaskCreate( task_B, ( const portCHAR * ) "task B", 128 /* stack size */, NULL, 25, NULL );
