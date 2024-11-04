@@ -68,22 +68,18 @@ void motorRight_SetDuty(int duty)
 
 //RobotState robot_state = STOPPED;
 
-void onMoveForward(int index,int consigne) {
-    //dxl_setGoalVelocity(1, velocity);
-    //dxl_setGoalVelocity(2, -velocity);
-   // robot_state = MOVING_FORWARD;
-	printf("moving forward \n\r");
+void onMoveForward(int duty) {
+	motorRight_SetDuty(duty);
+	motorLeft_SetDuty(-duty);
 }
 
-void onMoveBackward(int index,int consigne) {
-    //dxl_setGoalVelocity(1, -velocity);
-    //dxl_setGoalVelocity(2, velocity);
-    //robot_state = MOVING_BACKWARD;
+void onMoveBackward(int duty) {
+	motorRight_SetDuty(-duty);
+	motorLeft_SetDuty(duty);
 }
 
-void stopMoving(int index) {
-   //dxl_setGoalVelocity(1, velocity);
-   //dxl_setGoalVelocity(2, velocity);
-   // robot_state = STOPPED;
+void stopMoving(int duty) {
+	motorRight_SetDuty(duty);
+	motorLeft_SetDuty(duty);
 }
 

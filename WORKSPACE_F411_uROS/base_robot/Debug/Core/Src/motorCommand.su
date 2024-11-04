@@ -2,5 +2,5 @@
 ../Core/Src/motorCommand.c:55:6:motorLeft_SetDuty	16	static
 ../Core/Src/motorCommand.c:62:6:motorRight_SetDuty	16	static
 ../Core/Src/motorCommand.c:71:6:onMoveForward	16	static
-../Core/Src/motorCommand.c:78:6:onMoveBackward	16	static
-../Core/Src/motorCommand.c:84:6:stopMoving	16	static
+../Core/Src/motorCommand.c:76:6:onMoveBackward	16	static
+../Core/Src/motorCommand.c:81:6:stopMoving	16	static

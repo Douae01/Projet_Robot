@@ -7,7 +7,7 @@
 
 #define ARRAY_LEN 100
 #define SAMPLING_PERIOD_ms 5
-#define FIND_MOTOR_INIT_POS 0
+#define FIND_MOTOR_INIT_POS 1
 
 //################################################
 #define EX1 1
@@ -40,6 +40,8 @@ const osThreadAttr_t defaultTask_attributes = {
 // Déclaration des objets synchronisants !! Ne pas oublier de les créer
 xSemaphoreHandle xSemaphore = NULL;
 xQueueHandle qh = NULL;
+xQueueHandle qhL = NULL;
+xQueueHandle qhR = NULL;
 
 struct AMessage // Exemple de type de message pour queues, on peut mettre ce qu'on veut
 {
@@ -58,9 +60,6 @@ int Right_first_index_reached = 0;
 //========================================================================
 #if SYNCHRO_EX == EX1
 
-xQueueHandle qhL = NULL;
-xQueueHandle qhR = NULL;
-
 #define Te 5
 #define tau_L 230
 #define tau_R 210
@@ -77,42 +76,27 @@ int speed;
 // Fonction de contrôle pour la roue gauche
 static void task_A(void *pvParameters)
 {
+	struct AMessage pxLMessage;
 	int consigne = 0; // La vitesse à laquelle je souhaite rouler
 	int speed_L=0; // vitesse roue gauche
 	int err_L; // erreur : La différence entre ce que je souhaite et ce que j’ai réellement
 	float proportionalComponent_L;
 	static float integralComponent_L=0.0;
-	struct AMessage pxLxedMessage;
 	int i;
 
 
 	for (;;)
 	{
 		// Synchronisation de l’asservissement
-		xQueueReceive( qhL,  &( pxLxedMessage ) , portMAX_DELAY );
-		printf("TASK A \r\n");
+		xQueueReceive( qhL,  &( pxLMessage ) , portMAX_DELAY );
+		//printf("TASK A \r\n");
 		// Vitesse moteur gauche
 		speed_L = quadEncoder_GetSpeedL();
-		err_L=500-speed_L;
+		err_L=300-speed_L;
 		proportionalComponent_L=Kp_L*(float)err_L;
 		integralComponent_L=integralComponent_L+Kp_L*Ki_L*(float)err_L;
 		consigne = (int)(proportionalComponent_L+integralComponent_L);
 		motorLeft_SetDuty(consigne+100); //centrer le rapport cyclique, ce qui place les moteurs au repos si duty = 100
-
-		switch(pxLxedMessage.command){
-			case 'f':
-				onMoveForward(2, consigne);
-				break;
-			case 'b' :
-				onMoveBackward(2, consigne);
-				break;
-			case 's' :
-				stopMoving(2);
-				break;
-			default :
-				break;
-		}
-
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
 		vTaskDelay(5);
@@ -122,39 +106,25 @@ static void task_A(void *pvParameters)
 // Fonction de contrôle pour la roue droite
 static void task_B(void *pvParameters)
 {
+	struct AMessage pxRMessage;
 	int consigne = 0;
 	int speed_R=0; // vitesse roue droite
 	int err_R;
 	float proportionalComponent_R;
 	static float integralComponent_R=0.0;
-	struct AMessage pxRxedMessage;
 	int i;
 
 	for (;;)
 	{
-		xQueueReceive( qhR,  &( pxRxedMessage ) , portMAX_DELAY );
-		printf("TASK B \r\n");
+		xQueueReceive( qhR,  &( pxRMessage ) , portMAX_DELAY );
+		//printf("TASK B \r\n");
 
 		speed_R = quadEncoder_GetSpeedR();
-		err_R=500-speed_R;
+		err_R=300-speed_R;
 		proportionalComponent_R=Kp_R*(float)err_R;
 		integralComponent_R=integralComponent_R+Kp_R*Ki_R*(float)err_R;
 		consigne = (int)(proportionalComponent_R+integralComponent_R);
 		motorRight_SetDuty(consigne+100);
-
-		switch(pxRxedMessage.command){
-			case 'f':
-				onMoveForward(1, consigne);
-				break;
-			case 'b' :
-				onMoveBackward(1, consigne);
-				break;
-			case 's' :
-				stopMoving(1);
-				break;
-			default :
-				break;
-		}
 
 		xSemaphoreGive( xSemaphore );
 		vTaskDelay(5);
@@ -165,16 +135,17 @@ static void task_B(void *pvParameters)
 static void task_C( void *pvParameters )
 {
 	struct AMessage pxMessage;
-	pxMessage.command='a';
+	pxMessage.command='f';
 	pxMessage.data=1000;
 	vTaskDelay(1000); // attendre 1s
 
 	// envoi régulier des ordres de mise à jour
 	for (;;)
 	{
-	    printf("TASK C \r\n");
+	    //printf("TASK C \r\n");
 	    xQueueSend( qhL, ( void * ) &pxMessage,  portMAX_DELAY ); // envoi queue gauche
 	    xSemaphoreTake( xSemaphore, portMAX_DELAY );
+
 
 	    xQueueSend( qhR, ( void * ) &pxMessage,  portMAX_DELAY ); // envoi queue droite
 	    xSemaphoreTake( xSemaphore, portMAX_DELAY );
@@ -308,8 +279,8 @@ int main(void)
 		speed = quadEncoder_GetSpeedR();
 	 }
 
-	 motorLeft_SetDuty(100);
-	 motorRight_SetDuty(100);
+	 motorLeft_SetDuty(50);
+	 motorRight_SetDuty(50);
 	 HAL_Delay(200);
 
 	 speed = quadEncoder_GetSpeedL();
@@ -318,7 +289,7 @@ int main(void)
 
   osKernelInitialize();
 
-  xTaskCreate( microros_task, ( const portCHAR * ) "microros_task", 3000 /* stack size */, NULL,  24, NULL );
+  //xTaskCreate( microros_task, ( const portCHAR * ) "microros_task", 3000 /* stack size */, NULL,  24, NULL );
 #if SYNCHRO_EX == EX1
 	xTaskCreate( task_A, ( const portCHAR * ) "task A", 128 /* stack size */, NULL, 26, NULL );
 	xTaskCreate( task_B, ( const portCHAR * ) "task B", 128 /* stack size */, NULL, 25, NULL );
@@ -430,6 +401,7 @@ void microros_task(void *argument)
     osDelay(10);
   }
 }
+
 //=========================================================================
 /**
   * @brief  Period elapsed callback in non blocking mode
