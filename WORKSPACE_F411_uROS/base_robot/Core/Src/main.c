@@ -77,8 +77,8 @@ int speed;
 static void task_A(void *pvParameters)
 {
 	struct AMessage pxLMessage;
-	int consigne = 0; // La vitesse à laquelle je souhaite rouler
-	int speed_L=0; // vitesse roue gauche
+	int consigne; // La vitesse à laquelle je souhaite rouler
+	int speed_L; // vitesse roue gauche
 	int err_L; // erreur : La différence entre ce que je souhaite et ce que j’ai réellement
 	float proportionalComponent_L;
 	static float integralComponent_L=0.0;
@@ -121,8 +121,8 @@ static void task_A(void *pvParameters)
 static void task_B(void *pvParameters)
 {
 	struct AMessage pxRMessage;
-	int consigne = 0;
-	int speed_R=0; // vitesse roue droite
+	int consigne;
+	int speed_R; // vitesse roue droite
 	int err_R;
 	float proportionalComponent_R;
 	static float integralComponent_R=0.0;

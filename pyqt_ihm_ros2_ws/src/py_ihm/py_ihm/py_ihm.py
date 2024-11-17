@@ -8,6 +8,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QHBoxLayout, QGridLayout
 
 ########################################################################
+
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -52,6 +53,15 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        # Mode de fonctionnement et obstacles
+        self.current_mode = "Manuel"
+        self.obstacle_status = "Aucun"
+
+        # Labels pour afficher les données du robot
+        self.wheel_speed_label = QLabel('Vitesse de rotation des roues: 0 tr/min', self)
+        self.robot_speed_label = QLabel('Vitesse du robot: 0.0 m/s (0.0 km/h)', self)
+        self.obstacle_label = QLabel('Présence d\'obstacle: Aucun', self)
+
         # Label et ComboBox pour le mode de fonctionnement
         self.mode_label = QLabel('Choix du Mode de Fonctionnement du Robot:', self)
         self.mode_combo = QComboBox(self)
@@ -66,14 +76,6 @@ class MainWindow(QMainWindow):
         # Bouton pour envoyer la vitesse
         self.send_speed_button = QPushButton('Envoyer la vitesse', self)
         self.send_speed_button.clicked.connect(self.onSendSpeed)
-
-        # Layout pour les contrôles principaux (mode et vitesse) à gauche
-        left_layout = QVBoxLayout()
-        left_layout.addWidget(self.mode_label)
-        left_layout.addWidget(self.mode_combo)
-        left_layout.addWidget(self.speed_label)
-        left_layout.addWidget(self.speed_input)
-        left_layout.addWidget(self.send_speed_button)
 
         # Boutons de contrôle de mouvement
         self.btn_forward = QPushButton('Avancer', self)
@@ -99,14 +101,17 @@ class MainWindow(QMainWindow):
         movement_layout.addWidget(self.btn_right, 1, 2)    # Droite
         movement_layout.addWidget(self.btn_backward, 2, 1) # Bas
 
-        # Ajout du layout des boutons dans un conteneur à droite
-        right_widget = QWidget()
-        right_widget.setLayout(movement_layout)
-
-        # Disposition principale : contenu à gauche et contrôles de mouvement à droite
-        main_layout = QHBoxLayout()
-        main_layout.addLayout(left_layout)  # Contenu principal à gauche
-        main_layout.addWidget(right_widget) # Manette à droite
+        # Layout principal vertical
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.mode_label)
+        main_layout.addWidget(self.mode_combo)
+        main_layout.addWidget(self.speed_label)
+        main_layout.addWidget(self.speed_input)
+        main_layout.addWidget(self.send_speed_button)
+        main_layout.addWidget(self.wheel_speed_label)
+        main_layout.addWidget(self.robot_speed_label)
+        main_layout.addWidget(self.obstacle_label)
+        main_layout.addLayout(movement_layout)
 
         # Configuration du widget principal
         widget = QWidget()
@@ -123,10 +128,23 @@ class MainWindow(QMainWindow):
         # Timer pour les événements ROS
         self.timer = QTimer()
         self.timer.timeout.connect(self.onTimerTick)
-        self.timer.start(5)
-        
-        # Compteur de messages
-        self.i = 0
+        self.timer.start(1000)
+
+    def listener_callback(self, msg):
+        data = msg.data
+        print(f'I heard: "{data}"')
+
+        # Simulate data parsing from the message
+        if data.startswith("WHEEL_SPEED:"):
+            wheel_speed = data.split(":")[1]
+            self.wheel_speed_label.setText(f'Vitesse de rotation des roues: {wheel_speed} tr/min')
+        elif data.startswith("ROBOT_SPEED:"):
+            speed_m_s = float(data.split(":")[1])
+            speed_kmh = speed_m_s * 3.6
+            self.robot_speed_label.setText(f'Vitesse du robot: {speed_m_s:.2f} m/s ({speed_kmh:.2f} km/h)')
+        elif data.startswith("OBSTACLE:"):
+            obstacle_status = data.split(":")[1]
+            self.obstacle_label.setText(f'Présence d\'obstacle: {obstacle_status}')
 
     def onSendSpeed(self):
         # Envoi de la vitesse entrée par l'utilisateur
