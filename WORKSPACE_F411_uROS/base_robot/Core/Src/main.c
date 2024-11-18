@@ -215,9 +215,23 @@ static void obstacleDetectionTask(void *pvParameters)
             }
             else
             {
-                // Pas d'obstacle, envoyer les commandes utilisateur
-                pxMessage.command = command_received;  // Commande reçue ('f', 'b', 'l', 'r')
-                pxMessage.data = speed_received;       // Vitesse associée
+            	if (command_received == 'f') {
+            		pxMessage.command = command_received;
+            		pxMessage.data = speed_received; // Speed forward
+        		} else if (command_received == 'b') {
+        			pxMessage.command = command_received;
+            		pxMessage.data = speed_received; // Speed backward (can be the same or different)
+            	} else if (command_received == 'l') {
+            		pxMessage.command = command_received;
+            		pxMessage.data = speed_received; // Speed for turning (could be different)
+
+            	} else if (command_received == 'r') {
+            		pxMessage.command = command_received;
+            		pxMessage.data = speed_received; // Speed for turning (could be different)
+            	else {
+            		pxMessage.command = 's';  // Stop command
+            		pxMessage.data = 0;  // No speed
+            	}
             }
         }
 
