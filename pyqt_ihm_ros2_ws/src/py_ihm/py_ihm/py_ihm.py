@@ -38,9 +38,10 @@ class MainWindow(QMainWindow):
                 background-color: #0056b3;
             }
             QPushButton#btnUp { background-color: #4CAF50; color: white; }
-            QPushButton#btnDown { background-color: #FF5733; color: white; }
+            QPushButton#btnDown { background-color: #8A2BE2; color: white; }
             QPushButton#btnLeft { background-color: #FFC300; color: white; }
             QPushButton#btnRight { background-color: #337ab7; color: white; }
+            QPushButton#btnStop { background-color: #FF5733; color: white; }
             # QPushButton:hover {
                 
             # }
@@ -59,10 +60,16 @@ class MainWindow(QMainWindow):
 
         # Labels pour afficher les données du robot
         self.wheel_speed_label = QLabel('Vitesse de rotation des roues: 0 tr/min', self)
+        self.wheel_speed_display=QLineEdit()
+        self.wheel_speed_display.setReadOnly(True)
 
-        self.robot_speed_label = QLabel('Vitesse du robot: 0.0 m/s (0.0 km/h)', self)
+        self.robot_speed_label = QLabel('Vitesse du robot: m/s et km/h', self)
+        self.robot_speed_display=QLineEdit()
+        self.robot_speed_display.setReadOnly(True)
 
         self.obstacle_label = QLabel('Présence d\'obstacle: ', self)
+        self.obstacle_display=QLineEdit()
+        self.obstacle_display.setReadOnly(True)
 
         # Label et ComboBox pour le mode de fonctionnement
         self.mode_label = QLabel('Choix du Mode de Fonctionnement du Robot:', self)
@@ -93,16 +100,21 @@ class MainWindow(QMainWindow):
         self.btn_right = QPushButton('Droite', self)
         self.btn_right.setObjectName("btnRight")
 
+        self.btn_stop = QPushButton('Stop', self)
+        self.btn_stop.setObjectName("btnStop")
+
         self.btn_forward.clicked.connect(lambda: self.send_movement_command("f"))
         self.btn_backward.clicked.connect(lambda: self.send_movement_command("b"))
         self.btn_left.clicked.connect(lambda: self.send_movement_command("l"))
         self.btn_right.clicked.connect(lambda: self.send_movement_command("r"))
+        self.btn_stop.clicked.connect(lambda: self.send_movement_command("s"))
 
         # Disposition en grille pour les boutons de mouvement (comme une manette)
         self.movement_layout.addWidget(self.btn_forward, 0, 1)  # Haut
         self.movement_layout.addWidget(self.btn_left, 1, 0)     # Gauche
         self.movement_layout.addWidget(self.btn_right, 1, 2)    # Droite
         self.movement_layout.addWidget(self.btn_backward, 2, 1) # Bas
+        self.movement_layout.addWidget(self.btn_stop, 1, 1) # Bas
 
         input_layout = QHBoxLayout()
         input_layout.addWidget(self.speed_label)
@@ -118,8 +130,11 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(input_layout)
         main_layout.addWidget(self.send_speed_button)
         main_layout.addWidget(self.wheel_speed_label)
+        main_layout.addWidget(self.wheel_speed_display)
         main_layout.addWidget(self.robot_speed_label)
+        main_layout.addWidget(self.robot_speed_display)
         main_layout.addWidget(self.obstacle_label)
+        main_layout.addWidget(self.obstacle_display)
         main_layout.addLayout(self.movement_layout)
 
         # Configuration du widget principal
@@ -190,6 +205,11 @@ class MainWindow(QMainWindow):
             msg.data = f'r{speed}'  # Right with speed
             self.publisher_speed_movement.publish(msg)
             print(f'Publishing Movement: "{msg.data}"')
+        elif direction == "s":
+            msg = String()
+            msg.data = f's{speed}'
+            self.publisher_speed_movement.publish(msg)
+            print(f'Publishing Movement: "{msg.data}"')
 
     def movement_speed_callback(self, msg):
         """
@@ -207,18 +227,31 @@ class MainWindow(QMainWindow):
             speed = float(speed_str.strip())
                 
             # Mise à jour de l'affichage dans l'interface utilisateur
-            self.speed_display.setText(f'{speed:.2f} m/s')
+            self.robot_speed_display.setText(f'{speed:.2f} m/s')
 
         except (IndexError, ValueError) as e:
             # Gestion des erreurs d'index ou de conversion
             print(f"Erreur lors de l'analyse des données de vitesse : {e}")
 
     def obstacle_callback(self, msg):
-        # Display the obstacle information in the GUI
-        self.obstacle_display.setText(msg.data)
+        message_text = msg.data
+        print(f"Message reçu : {message_text}")
+
+
+        obstacle_str= message_text.split("obstacle detected : #")[1]
+
+        obstacle = int(obstacle_str.strip())
+
+        if obstacle == 0:
+            self.obstacle_display.setText("Aucun obstacle")
+        elif obstacle == 1:
+            self.obstacle_display.setText("Obstacle devant")
+        elif obstacle == 2:
+            self.obstacle_display.setText("Obstacle derrière")
+
 
     def onTimerTick(self):
-        rclpy.spin_once(self.node,timeout_sec=0.1)
+        rclpy.spin_once(self.node,timeout_sec=0.01)
 
 ########################################################################
 def main(args=None):

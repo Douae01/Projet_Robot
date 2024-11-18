@@ -66,9 +66,6 @@ void motorRight_SetDuty(int duty)
 }
 //=================================================================
 
-
-RobotState robot_state = STOPPED;
-
 /* N.B: centrer le rapport cyclique
 ce qui place les moteurs au repos si duty = 100 */
 
@@ -92,7 +89,7 @@ void onMoveBackward(int index,int consigne) {
     robot_state = MOVING_BACKWARD;
 }
 
-void onMoveleft(int index, int consigne) {
+void onMoveLeft(int index, int consigne) {
     if(index==1){
    		motorRight_SetDuty(consigne+100);
     }

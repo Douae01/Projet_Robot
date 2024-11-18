@@ -109,7 +109,7 @@ static void control_motorLeft(void *pvParameters)
 			onMoveRight(2,consigne);
 		}
 		else if(pxLMessage.command=='l'){
-			onMoveleft(2,consigne);
+			onMoveLeft(2,consigne);
 		}
 
 		// Vitesse moteur gauche
@@ -160,7 +160,7 @@ static void control_motorRight(void *pvParameters)
 			onMoveRight(1,consigne);
 		}
 		else if(pxRMessage.command=='l'){
-			onMoveleft(1,consigne);
+			onMoveLeft(1,consigne);
 		}
 
 		// Vitesse moteur droite
@@ -260,8 +260,8 @@ static void obstacleDetectionTask(void *pvParameters)
             {
                 // Obstacle détecté à l'arrière : avancer
                 printf("Mode Aléatoire:\nObstacle Arrière");
-                pxMessage.command = 'f'; // Avancer
-                pxMessage.data = 200;    // Vitesse d'avance
+                pxMessage.command = 's'; // Stop
+                pxMessage.data = 0;    
                 obstacle_detected = 2;
             }
             else
