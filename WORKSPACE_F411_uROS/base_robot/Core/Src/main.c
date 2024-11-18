@@ -60,6 +60,10 @@ int Right_first_index_reached = 0;
 //========================================================================
 #if SYNCHRO_EX == EX1
 
+// Fonctionnement du moteur en différents modes
+int currentMode = 0;
+int lastMode = 0;
+
 #define Te 5
 #define tau_L 230
 #define tau_R 210
@@ -72,115 +76,246 @@ int Right_first_index_reached = 0;
 
 int tab_speed[100];
 int speed;
+int obstacle_detected ;
+char command_received ;
+int speed_received ;
 
+int speed_L=0; // vitesse roue gauche
 // Fonction de contrôle pour la roue gauche
-static void task_A(void *pvParameters)
+static void control_motorLeft(void *pvParameters)
 {
 	struct AMessage pxLMessage;
-	int consigne; // La vitesse à laquelle je souhaite rouler
-	int speed_L; // vitesse roue gauche
+	int consigne=0; // La vitesse à laquelle je souhaite rouler
 	int err_L; // erreur : La différence entre ce que je souhaite et ce que j’ai réellement
 	float proportionalComponent_L;
 	static float integralComponent_L=0.0;
-	int i;
-
+    int commande = 0;
+    int start = 0;
+    int tmp = 0;
 
 	for (;;)
 	{
 		// Synchronisation de l’asservissement
 		xQueueReceive( qhL,  &( pxLMessage ) , portMAX_DELAY );
-		//printf("TASK A \r\n");
+		consigne= pxLMessage.data;
+
+		if(pxLMessage.command=='f'){
+			onMoveForward(2,consigne);
+		}
+		else if(pxLMessage.command=='b'){
+			onMoveBackward(2,consigne);
+		}
+		else if(pxLMessage.command=='r'){
+			onMoveRight(2,consigne);
+		}
+		else if(pxLMessage.command=='l'){
+			onMoveleft(2,consigne);
+		}
+
 		// Vitesse moteur gauche
 		speed_L = quadEncoder_GetSpeedL();
-		err_L=300-speed_L;
+		err_L=consigne-speed_L;
 		proportionalComponent_L=Kp_L*(float)err_L;
 		integralComponent_L=integralComponent_L+Kp_L*Ki_L*(float)err_L;
-		consigne = (int)(proportionalComponent_L+integralComponent_L);
+		commande = (int)(proportionalComponent_L+integralComponent_L);
 
-		switch(pxLMessage.command){
-			case 'f':
-				onMoveForward(2,consigne);
-				break;
-			case 'b':
-				onMoveBackward(2,consigne);
-				break;
-			case 's':
-				stopMoving(2);
-				break;
-			default:
-				break;
+		if(pxLMessage.command=='s'){
+			stopMoving(2);
+		}else {
+			motorLeft_SetDuty(commande+100);
 		}
 
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
-		vTaskDelay(5);
 	}
 }
 
+int speed_R=0; // vitesse roue droite
 // Fonction de contrôle pour la roue droite
-static void task_B(void *pvParameters)
+static void control_motorRight(void *pvParameters)
 {
 	struct AMessage pxRMessage;
-	int consigne;
-	int speed_R; // vitesse roue droite
-	int err_R;
+	int consigne=0; // La vitesse à laquelle je souhaite rouler
+	int err_R; // erreur : La différence entre ce que je souhaite et ce que j’ai réellement
 	float proportionalComponent_R;
 	static float integralComponent_R=0.0;
-	int i;
+    int commande = 0;
+    int start = 0;
+    int tmp = 0;
 
 	for (;;)
 	{
+		// Synchronisation de l’asservissement
 		xQueueReceive( qhR,  &( pxRMessage ) , portMAX_DELAY );
-		//printf("TASK B \r\n");
+		consigne= pxRMessage.data;
 
-		speed_R = quadEncoder_GetSpeedR();
-		err_R=300-speed_R;
-		proportionalComponent_R=Kp_R*(float)err_R;
-		integralComponent_R=integralComponent_R+Kp_R*Ki_R*(float)err_R;
-		consigne = (int)(proportionalComponent_R+integralComponent_R);
-
-		switch(pxRMessage.command){
-			case 'f':
-				onMoveForward(1,consigne);
-				break;
-			case 'b':
-				onMoveBackward(1,consigne);
-				break;
-			case 's':
-				stopMoving(1);
-				break;
-			default:
-				break;
+		if(pxRMessage.command=='f'){
+			onMoveForward(1,consigne);
+		}
+		else if(pxRMessage.command=='b'){
+			onMoveBackward(1,consigne);
+		}
+		else if(pxRMessage.command=='r'){
+			onMoveRight(1,consigne);
+		}
+		else if(pxRMessage.command=='l'){
+			onMoveleft(1,consigne);
 		}
 
+		// Vitesse moteur droite
+		speed_R = quadEncoder_GetSpeedR();
+		err_R=consigne-speed_R;
+		proportionalComponent_R=Kp_R*(float)err_R;
+		integralComponent_R=integralComponent_R+Kp_R*Ki_R*(float)err_R;
+		commande = (int)(proportionalComponent_R+integralComponent_R);
+
+		if(pxRMessage.command=='s'){
+			stopMoving(1);
+		}else {
+			motorRight_SetDuty(commande+100);
+		}
+
+		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
-		vTaskDelay(5);
 	}
 }
 
 // Générateur d'ordres pour le contrôle des moteurs du robot
-static void task_C( void *pvParameters )
+static void obstacleDetectionTask(void *pvParameters)
 {
-	struct AMessage pxMessage;
-	pxMessage.command='s';
-	pxMessage.data=100;
-	vTaskDelay(1000); // attendre 1s
+    struct AMessage pxMessage;
+    int frontObstacle , rearObstacle;
+    vTaskDelay(5); // Initial delay for system setup
 
-	// envoi régulier des ordres de mise à jour
-	for (;;)
-	{
-	    //printf("TASK C \r\n");
-	    xQueueSend( qhL, ( void * ) &pxMessage,  portMAX_DELAY ); // envoi queue gauche
-	    xSemaphoreTake( xSemaphore, portMAX_DELAY );
+    for (;;)
+    {
+        // Initialisation des drapeaux d'obstacle
+        obstacle_detected = 0;
+        frontObstacle = checkFrontObstacle();
+        rearObstacle = checkRearObstacle();
+
+        // Mode Manuel
+        if (currentMode == 0)
+        {
+            if (frontObstacle>=0)
+            {
+                // Obstacle détecté à l'avant
+                printf("Mode Manuel:\nObstacle Avant");
+                pxMessage.command = 's'; // Stop
+                obstacle_detected = 1;
+            }
+            else if (rearObstacle)
+            {
+                // Obstacle détecté à l'arrière
+                printf("Mode Manuel:\nObstacle Arrière");
+                pxMessage.command = 's'; // Stop
+                obstacle_detected = 2;
+            }
+            else
+            {
+                // Pas d'obstacle, envoyer les commandes utilisateur
+                pxMessage.command = command_received;  // Commande reçue ('f', 'b', 'l', 'r')
+                pxMessage.data = speed_received;       // Vitesse associée
+            }
+        }
+
+        // Mode Aléatoire
+        else if (currentMode == 1)
+        {
+            if (frontObstacle>=0)
+            {
+                // Obstacle détecté à l'avant : éviter
+                printf("Mode Aléatoire:\nObstacle détecté à l'avant - ");
+                if (frontObstacle == 0)
+                {
+                    printf("côté gauche.\n");
+                    pxMessage.command = 'r'; // Tourner à droite
+                    pxMessage.data = 200;   // Vitesse de rotation
+                }
+                else if (frontObstacle == 1)
+                {
+                    printf("côté droit.\n");
+                    pxMessage.command = 'l'; // Tourner à gauche
+                    pxMessage.data = 200;    // Vitesse de rotation
+                }
+                obstacle_detected = 1;
+            }
+            else if (rearObstacle)
+            {
+                // Obstacle détecté à l'arrière : avancer
+                printf("Mode Aléatoire:\nObstacle Arrière");
+                pxMessage.command = 'f'; // Avancer
+                pxMessage.data = 200;    // Vitesse d'avance
+                obstacle_detected = 2;
+            }
+            else
+            {
+                // Pas d'obstacle : avancer aléatoirement
+                pxMessage.command = 'f'; // Avancer
+                pxMessage.data = 300;    // Vitesse d'avance
+            }
+        }
+
+        /* Mode Tracking
+        else if (currentMode == 2)
+        {
+            if (obstacle_detected_forward)
+            {
+                // Obstacle détecté à l'avant : s'arrêter
+                groveLCD_clear();
+                groveLCD_term_printf("Mode Tracking:\nObstacle Avant");
+                pxMessage.command = 's'; // Stop
+            }
+            else
+            {
+                // Suivre la couleur détectée par la caméra
+                int trackingCommand = detectAndTrackColor(); // Fonction pour détecter et suivre une couleur
+                pxMessage.command = trackingCommand;         // Commande basée sur la couleur détectée
+                pxMessage.data = 200;                        // Vitesse associée au tracking
+            }
+        }*/
+
+        // Commandes pour les moteurs gauche et droit
+        xQueueSend(qhL, (void *)&pxMessage, portMAX_DELAY); // Commande moteur gauche
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+        xQueueSend(qhR, (void *)&pxMessage, portMAX_DELAY); // Commande moteur droit
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+        // Pause avant la prochaine itération
+        vTaskDelay(SAMPLING_PERIOD_ms);
+    }
+}
 
 
-	    xQueueSend( qhR, ( void * ) &pxMessage,  portMAX_DELAY ); // envoi queue droite
-	    xSemaphoreTake( xSemaphore, portMAX_DELAY );
+static void displayTask(void *pvParameters)
+{
+	struct AMessage receivedMessage;
+	for(;;) {
+        if (currentMode != lastMode)
+        {
+            groveLCD_clear();
 
-	    vTaskDelay(SAMPLING_PERIOD_ms);
-
+            switch (currentMode)
+            {
+                case 0:
+                    groveLCD_term_printf("Mode Manuel");
+                    break;
+                case 1:
+                    groveLCD_term_printf("Mode Aléatoire");
+                    break;
+                case 2:
+                    groveLCD_term_printf("Mode Suivi");
+                    break;
+                default:
+                    groveLCD_term_printf("Mode Inconnu");
+                    break;
+            }
+            lastMode = currentMode;
+        }
 	}
 }
+
 //========================================================
 #elif SYNCHRO_EX == EX2
 
@@ -316,11 +451,12 @@ int main(void)
 
   osKernelInitialize();
 
-  xTaskCreate( microros_task, ( const portCHAR * ) "microros_task", 3000 /* stack size */, NULL,  24, NULL );
+  xTaskCreate( microros_task, ( const portCHAR * ) "microros_task", 3000 /* stack size */, NULL,  25, NULL );
 #if SYNCHRO_EX == EX1
-	xTaskCreate( task_A, ( const portCHAR * ) "task A", 128 /* stack size */, NULL, 26, NULL );
-	xTaskCreate( task_B, ( const portCHAR * ) "task B", 128 /* stack size */, NULL, 25, NULL );
-	xTaskCreate( task_C, ( signed portCHAR * ) "task C", 128 /* stack size */, NULL, 28, NULL );
+	xTaskCreate( control_motorLeft, ( const portCHAR * ) "control motor Left", 128 /* stack size */, NULL, 27, NULL );
+	xTaskCreate( control_motorRight, ( const portCHAR * ) "control motor Right", 128 /* stack size */, NULL, 26, NULL );
+	xTaskCreate( obstacleDetectionTask, ( signed portCHAR * ) "obstacle Detection Task", 128 /* stack size */, NULL, 28, NULL );
+	xTaskCreate( displayTask, ( const portCHAR * ) "task LCD", 128 /* stack size */, NULL, 24, NULL );
 #elif SYNCHRO_EX == EX2
 	xTaskCreate( task_C, ( signed portCHAR * ) "task C", 128 /* stack size */, NULL, 28, NULL );
 	xTaskCreate( task_D, ( signed portCHAR * ) "task D", 128 /* stack size */, NULL, 27, NULL );

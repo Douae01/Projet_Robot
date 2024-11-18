@@ -14,7 +14,11 @@ void motorRight_SetDuty(int);
 
 void onMoveForward(int index,int consigne);
 void onMoveBackward(int index,int consigne);
+void onMoveLeft(int index, int consigne);
+void onMoveRight(int index, int consigne);
 void stopMoving(int index);
+int checkFrontObstacle(void);
+int checkRearObstacle(void);
 
 typedef enum {
     MOVING_FORWARD,

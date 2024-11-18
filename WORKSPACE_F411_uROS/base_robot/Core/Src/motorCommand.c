@@ -67,11 +67,14 @@ void motorRight_SetDuty(int duty)
 //=================================================================
 
 
-//RobotState robot_state = STOPPED;
+RobotState robot_state = STOPPED;
+
+/* N.B: centrer le rapport cyclique
+ce qui place les moteurs au repos si duty = 100 */
 
 void onMoveForward(int index,int consigne) {
 	if(index==1){
-		motorRight_SetDuty(-(consigne+100));
+		motorRight_SetDuty(consigne+100);
 	}
 	else if(index==2){
 		motorLeft_SetDuty(consigne+100);
@@ -81,20 +84,84 @@ void onMoveForward(int index,int consigne) {
 
 void onMoveBackward(int index,int consigne) {
 	if(index==1){
-		motorRight_SetDuty(consigne+100);
+		motorRight_SetDuty(-(consigne+100));
 	}
 	else if(index==2){
-		motorLeft_SetDuty(-(consigne+100)); //centrer le rapport cyclique, ce qui place les moteurs au repos si duty = 100
+		motorLeft_SetDuty(-(consigne+100));
 	}
     robot_state = MOVING_BACKWARD;
 }
 
+void onMoveleft(int index, int consigne) {
+    if(index==1){
+   		motorRight_SetDuty(consigne+100);
+    }
+   	else if(index==2){
+   		motorLeft_SetDuty(-(consigne+100));
+   	}
+    robot_state = TURNING_LEFT;
+}
+
+void onMoveRight(int index, int consigne) {
+    if(index==1){
+   		motorRight_SetDuty(-(consigne+100));
+   	}
+   	else if(index==2){
+    	motorLeft_SetDuty(consigne+100);
+   	}
+    robot_state = TURNING_RIGHT;
+}
+
 void stopMoving(int index) {
 	if(index==1){
-		motorRight_SetDuty(0);
+		motorRight_SetDuty(100);
 	}
 	else if(index==2){
-		motorLeft_SetDuty(0);
+		motorLeft_SetDuty(100);
 	}
     robot_state = STOPPED;
+}
+
+/**
+ * @brief Détecte la présence d'un obstacle à l'avant.
+ *
+ * @return 0 si un obstacle est détecté à gauche,
+ *         1 si un obstacle est détecté à droite,
+ *        -1 si aucun obstacle n'est détecté.
+ */
+int checkFrontObstacle(void) {
+    int sensorValues[2];      // Tableau pour stocker les lectures des capteurs IR
+    int threshold = 2000;     // Seuil pour détecter un obstacle (en unités du capteur)
+
+    // Récupère les valeurs des capteurs IR avant
+    captDistIR_Get(sensorValues);
+
+    // Vérifie les valeurs et détecte les obstacles
+    for (int i = 0; i < 2; i++) {
+        if (sensorValues[i] > threshold) {
+            return i;  // Retourne l'indice du capteur (0 = gauche, 1 = droite)
+        }
+    }
+
+    // Aucun obstacle détecté
+    return -1;
+}
+
+/**
+ * @brief Détecte la présence d'un obstacle à l'arrière.
+ *
+ * @return 1 si un obstacle est détecté,
+ *         0 si aucun obstacle n'est détecté.
+ */
+int checkRearObstacle(void) {
+    uint16_t range = VL53L0X_readRangeContinuousMillimeters(); // Lecture du capteur de distance arrière
+    uint16_t threshold = 100;                                 // Seuil de détection (en mm)
+
+    // Vérifie si la lecture est valide et si un obstacle est détecté
+    if (range > 0 && range < threshold) {
+        return 1;  // Obstacle détecté
+    }
+
+    // Aucun obstacle détecté
+    return 0;
 }
