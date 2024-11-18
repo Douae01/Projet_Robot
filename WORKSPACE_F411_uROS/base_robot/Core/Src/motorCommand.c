@@ -165,3 +165,59 @@ int checkRearObstacle(void) {
     // Aucun obstacle détecté
     return 0;
 }
+
+static int vitess_send = 0; // Variable pour stocker la vitesse calculée
+static char last_command = '\0'; // Dernière commande reçue
+
+/**
+ * @brief Traite les données de commande à partir du buffer fourni.
+ *
+ * @param buffer Pointeur vers la chaîne contenant la commande.
+ * @return char La dernière commande valide ou '\0' si aucune commande n'est disponible.
+ */
+char process_command_data(char* buffer) {
+    if (buffer != NULL) {
+        char first_char = buffer[0];
+
+        // Si le premier caractère est 'v', vérifier la commande précédente
+        if (first_char == 'v') {
+            return (last_command != '\0') ? last_command : '\0';
+        } else {
+            last_command = first_char;
+            return last_command;
+        }
+    }
+
+    return '\0';
+}
+
+/**
+ * @brief Traite les données de vitesse à partir du buffer.
+ *
+ * @param buffer Pointeur vers la chaîne contenant les données de vitesse.
+ * @return int La valeur entière de la vitesse calculée.
+ */
+int process_vitess_data(char* buffer) {
+    if (buffer != NULL) {
+        vitess_send = 0; // Réinitialiser la valeur de vitesse
+
+        for (int i = 0; buffer[i] != '\0'; i++) {
+            get_vitess(buffer[i]); // Traiter chaque caractère pour calculer la vitesse
+        }
+    }
+    // Retourner la vitesse calculée
+    return vitess_send;
+}
+
+/**
+ * @brief Traite un caractère pour le convertir en une valeur de vitesse.
+ *
+ * @param c Caractère à analyser (doit être un chiffre).
+ */
+void get_vitess(char c) {
+    // Vérifier si le caractère est un chiffre ('0' à '9')
+    if (c >= '0' && c <= '9') {
+        // Convertir le caractère en entier et mettre à jour la valeur de vitesse
+        vitess_send = vitess_send * 10 + (c - '0');
+    }
+}

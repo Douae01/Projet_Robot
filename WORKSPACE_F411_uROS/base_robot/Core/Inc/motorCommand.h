@@ -6,6 +6,7 @@
 #define INC_MOTORCOMMAND_H_
 
 #include "main.h"
+#include <stddef.h>
 
 
 void motorCommand_Init(void);
@@ -19,6 +20,9 @@ void onMoveRight(int index, int consigne);
 void stopMoving(int index);
 int checkFrontObstacle(void);
 int checkRearObstacle(void);
+char process_command_data(char* buffer);
+int process_vitess_data(char* buffer);
+void get_vitess(char c);
 
 typedef enum {
     MOVING_FORWARD,

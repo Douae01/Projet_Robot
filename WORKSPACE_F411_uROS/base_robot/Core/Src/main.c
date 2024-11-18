@@ -125,6 +125,7 @@ static void control_motorLeft(void *pvParameters)
 			motorLeft_SetDuty(commande+100);
 		}
 
+		speed=speed_L;
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
 	}
@@ -175,6 +176,7 @@ static void control_motorRight(void *pvParameters)
 			motorRight_SetDuty(commande+100);
 		}
 
+		speed=speed_R;
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
 	}
@@ -492,15 +494,27 @@ void microros_deallocate(void * pointer, void * state);
 void * microros_reallocate(void * pointer, size_t size, void * state);
 void * microros_zero_allocate(size_t number_of_elements, size_t size_of_element, void * state);
 
-
-void subscription_callback(const void * msgin)
+void subscription_handle_speed(const void * msgin)
 {
-  const std_msgs__msg__String * msg = (const std_msgs__msg__String *)msgin;
+    const std_msgs__msg__String * msg = (const std_msgs__msg__String *)msgin;
 
-  // Process message
-  printf("Received from HOST: %s\n\r", msg->data);
+    printf("Received Speed Data from HOST: %s\n\r", msg->data.data);
+
+    // Mise à jour de la variable de mode en fonction des données de vitesse
+    mode = process_vitess_data(msg->data.data);
 }
 
+void subscription_handle_command_and_speed(const void * msgin)
+{
+    const std_msgs__msg__String * msg = (const std_msgs__msg__String *)msgin;
+
+    // Traitement des données de commande et de vitesse
+    printf("Received Command and Speed Data from HOST: %s\n\r", msg->data.data);
+
+    // Mise à jour des variables pour la commande et la vitesse
+    command_received = process_command_data(msg->data.data);
+    speed_received = process_vitess_data(msg->data.data);
+}
 
 void microros_task(void *argument)
 {
@@ -532,36 +546,62 @@ void microros_task(void *argument)
   rclc_node_init_default(&node, "STM32_Node","", &support);
 
   // create publisher
-  rcl_publisher_t publisher;
-  std_msgs__msg__String sensor_dist_back_msg;
-  rclc_publisher_init_default(&publisher, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/sensor/dist_back");
+  rcl_publisher_t publisherSpeed;
+  std_msgs__msg__String sensor_speed_msg;
+  rclc_publisher_init_default(&publisherSpeed, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/sensor/motor_speed");
+
+  rcl_publisher_t publisherObstacle;
+  std_msgs__msg__String sensor_obs_msg;
+  rclc_publisher_init_default(&publisherObstacle, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/sensor/receive_obstacle");
 
   // create subscriber
-  rcl_subscription_t subscriber;
-  std_msgs__msg__String str_msg;
-  rclc_subscription_init_default(&subscriber,&node,ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/command/move");
+  rcl_subscription_t subscriberMode;
+  std_msgs__msg__String str_msg1;
+  rclc_subscription_init_default(&subscriberMode,&node,ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/command/mode");
+
+  rcl_subscription_t subscriberMove;
+  std_msgs__msg__String str_msg2;
+  rclc_subscription_init_default(&subscriberMove,&node,ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/command/move");
+
   // Add subscription to the executor
   rclc_executor_t executor;
-  rclc_executor_init(&executor, &support.context, 1, &allocator); // ! 'NUMBER OF HANDLES' A MODIFIER EN FONCTION DU NOMBRE DE TOPICS
-  rclc_executor_add_subscription(&executor, &subscriber, &str_msg, &subscription_callback, ON_NEW_DATA);
+  rclc_executor_init(&executor, &support.context, 2, &allocator); // ! 'NUMBER OF HANDLES' A MODIFIER EN FONCTION DU NOMBRE DE TOPICS
+  rclc_executor_add_subscription(&executor, &subscriberMode, &str_msg1, &subscription_handle_speed, ON_NEW_DATA);
+  rclc_executor_add_subscription(&executor, &subscriberMove, &str_msg2, &subscription_handle_command_and_speed, ON_NEW_DATA);
 
-  str_msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
-  str_msg.data.size = 0;
-  str_msg.data.capacity = ARRAY_LEN;
+  sensor_speed__msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+  sensor_speed__msg.data.size = 0;
+  sensor_speed__msg.data.capacity = ARRAY_LEN;
+
+  sensor_obs_msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+  sensor_obs_msg.data.size = 0;
+  sensor_obs_msg.data.capacity = ARRAY_LEN;
+
+  str_msg1.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+  str_msg1.data.size = 0;
+  str_msg1.data.capacity = ARRAY_LEN;
+
+  str_msg2.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+  str_msg2.data.size = 0;
+  str_msg2.data.capacity = ARRAY_LEN;
 
   for(;;)
   {
-	  sprintf(str_msg.data.data, "from STM32 : mes_vl53 : #%d", (int32_t)mes_vl53);
-	  str_msg.data.size = strlen(str_msg.data.data);
+	  sprintf(sensor_speed__msg.data.data, "from STM32 : speed=#%d", (int32_t)speed);
+	  sensor_speed__msg.data.size = strlen(sensor_speed__msg.data.data);
+	  sprintf(sensor_obs_msg.data.data, "from STM32 : obstacle detected : #%d", (int32_t)obstacle_detected);
+	  sensor_obs_msg.data.size = strlen(sensor_obs_msg.data.data);
 
-      rcl_ret_t ret = rcl_publish(&publisher, &str_msg, NULL);
+	  // Publish sensor data
+	  rcl_ret_t pub_ret1 = rcl_publish(&publisherSpeed, &sensor_speed__msg, NULL);
+	  rcl_ret_t pub_ret2 = rcl_publish(&publisherObstacle, &sensor_obs_msg, NULL);;
 
-		if (ret != RCL_RET_OK)
-		{
+	  if (pub_ret1 != RCL_RET_OK || pub_ret2 != RCL_RET_OK) {
 		  printf("Error publishing (line %d)\n\r", __LINE__);
-		}
-    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-    osDelay(10);
+	  }
+
+	  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+	  osDelay(10);
   }
 }
 
