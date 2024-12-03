@@ -177,7 +177,7 @@ class MainWindow(QMainWindow):
         speed = self.speed_input.text()
         if speed:
             msg = String()
-            msg.data = f'VITESSE:{speed}'
+            msg.data = f'v{speed}'
             self.publisher_speed_movement.publish(msg)
             print(f'Vitesse envoyée : "{speed}" -> Publishing Speed: "{msg.data}"')
         else:
@@ -251,7 +251,7 @@ class MainWindow(QMainWindow):
 
 
     def onTimerTick(self):
-        rclpy.spin_once(self.node,timeout_sec=0.01)
+        rclpy.spin_once(self.node,timeout_sec=0.1)
 
 ########################################################################
 def main(args=None):

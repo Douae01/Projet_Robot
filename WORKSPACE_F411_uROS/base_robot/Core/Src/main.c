@@ -97,19 +97,21 @@ static void control_motorLeft(void *pvParameters)
 	{
 		// Synchronisation de l’asservissement
 		xQueueReceive( qhL,  &( pxLMessage ) , portMAX_DELAY );
-		consigne= pxLMessage.data;
 
 		if(pxLMessage.command=='f'){
-			onMoveForward(2,consigne);
+			consigne= pxLMessage.data;
 		}
 		else if(pxLMessage.command=='b'){
-			onMoveBackward(2,consigne);
+			consigne= -pxLMessage.data;
 		}
 		else if(pxLMessage.command=='r'){
-			onMoveRight(2,consigne);
+			consigne= pxLMessage.data;
 		}
 		else if(pxLMessage.command=='l'){
-			onMoveLeft(2,consigne);
+			consigne= -pxLMessage.data;
+		}
+		else{
+			consigne= pxLMessage.data;
 		}
 
 		// Vitesse moteur gauche
@@ -148,19 +150,21 @@ static void control_motorRight(void *pvParameters)
 	{
 		// Synchronisation de l’asservissement
 		xQueueReceive( qhR,  &( pxRMessage ) , portMAX_DELAY );
-		consigne= pxRMessage.data;
 
 		if(pxRMessage.command=='f'){
-			onMoveForward(1,consigne);
+			consigne= pxRMessage.data;
 		}
 		else if(pxRMessage.command=='b'){
-			onMoveBackward(1,consigne);
+			consigne= -pxRMessage.data;
 		}
 		else if(pxRMessage.command=='r'){
-			onMoveRight(1,consigne);
+			consigne= -pxRMessage.data;
 		}
 		else if(pxRMessage.command=='l'){
-			onMoveLeft(1,consigne);
+			consigne= pxRMessage.data;
+		}
+		else{
+			consigne= pxRMessage.data;
 		}
 
 		// Vitesse moteur droite
@@ -191,6 +195,7 @@ static void obstacleDetectionTask(void *pvParameters)
 
     for (;;)
     {
+    	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, 1);
         // Initialisation des drapeaux d'obstacle
         obstacle_detected = 0;
         frontObstacle = checkFrontObstacle();
@@ -202,20 +207,22 @@ static void obstacleDetectionTask(void *pvParameters)
             if (frontObstacle>=0)
             {
                 // Obstacle détecté à l'avant
-                printf("Mode Manuel:\nObstacle Avant");
+                //printf("Mode Manuel:\nObstacle Avant");
                 pxMessage.command = 's'; // Stop
                 obstacle_detected = 1;
             }
             else if (rearObstacle)
             {
                 // Obstacle détecté à l'arrière
-                printf("Mode Manuel:\nObstacle Arrière");
+                //printf("Mode Manuel:\nObstacle Arrière");
                 pxMessage.command = 's'; // Stop
                 obstacle_detected = 2;
             }
             else
             {
-            	if (command_received == 'f') {
+            	pxMessage.command = command_received;
+            	pxMessage.data = speed_received;
+            	/*if (command_received == 'f') {
             		pxMessage.command = command_received;
             		pxMessage.data = speed_received; // Speed forward
         		} else if (command_received == 'b') {
@@ -231,7 +238,7 @@ static void obstacleDetectionTask(void *pvParameters)
             	else {
             		pxMessage.command = 's';  // Stop command
             		pxMessage.data = 0;  // No speed
-            	}
+            	}*/
             }
         }
 
@@ -241,16 +248,16 @@ static void obstacleDetectionTask(void *pvParameters)
             if (frontObstacle>=0)
             {
                 // Obstacle détecté à l'avant : éviter
-                printf("Mode Aléatoire:\nObstacle détecté à l'avant - ");
+                //printf("Mode Aléatoire:\nObstacle détecté à l'avant - ");
                 if (frontObstacle == 0)
                 {
-                    printf("côté gauche.\n");
+                    //printf("côté gauche.\n");
                     pxMessage.command = 'r'; // Tourner à droite
                     pxMessage.data = 200;   // Vitesse de rotation
                 }
                 else if (frontObstacle == 1)
                 {
-                    printf("côté droit.\n");
+                    //printf("côté droit.\n");
                     pxMessage.command = 'l'; // Tourner à gauche
                     pxMessage.data = 200;    // Vitesse de rotation
                 }
@@ -259,9 +266,8 @@ static void obstacleDetectionTask(void *pvParameters)
             else if (rearObstacle)
             {
                 // Obstacle détecté à l'arrière : avancer
-                printf("Mode Aléatoire:\nObstacle Arrière");
+                //printf("Mode Aléatoire:\nObstacle Arrière");
                 pxMessage.command = 's'; // Stop
-                pxMessage.data = 0;    
                 obstacle_detected = 2;
             }
             else
@@ -300,7 +306,7 @@ static void obstacleDetectionTask(void *pvParameters)
 
         // Pause avant la prochaine itération
         vTaskDelay(SAMPLING_PERIOD_ms);
-    }
+        }
 }
 
 
@@ -310,21 +316,22 @@ static void displayTask(void *pvParameters)
 	for(;;) {
         if (currentMode != lastMode)
         {
-            groveLCD_clear();
+            groveLCD_display();
+            groveLCD_setCursor(0,0);
 
             switch (currentMode)
             {
                 case 0:
-                    groveLCD_term_printf("Mode Manuel");
+                    groveLCD_term_printf("Manuel");
                     break;
                 case 1:
-                    groveLCD_term_printf("Mode Aléatoire");
+                    groveLCD_term_printf("Aleatoire");
                     break;
                 case 2:
-                    groveLCD_term_printf("Mode Suivi");
+                    groveLCD_term_printf("Suivi");
                     break;
                 default:
-                    groveLCD_term_printf("Mode Inconnu");
+                    groveLCD_term_printf("Inconnu");
                     break;
             }
             lastMode = currentMode;
@@ -515,7 +522,7 @@ void subscription_handle_speed(const void * msgin)
     printf("Received Speed Data from HOST: %s\n\r", msg->data.data);
 
     // Mise à jour de la variable de mode en fonction des données de vitesse
-    mode = process_vitess_data(msg->data.data);
+    currentMode = process_vitess_data(msg->data.data);
 }
 
 void subscription_handle_command_and_speed(const void * msgin)
@@ -523,11 +530,12 @@ void subscription_handle_command_and_speed(const void * msgin)
     const std_msgs__msg__String * msg = (const std_msgs__msg__String *)msgin;
 
     // Traitement des données de commande et de vitesse
-    printf("Received Command and Speed Data from HOST: %s\n\r", msg->data.data);
+    //printf("Received Command and Speed Data from HOST: %s\n\r", msg->data.data);
 
     // Mise à jour des variables pour la commande et la vitesse
     command_received = process_command_data(msg->data.data);
     speed_received = process_vitess_data(msg->data.data);
+    printf("Received Command and Speed Data from HOST: %d\n\r",speed_received);
 }
 
 void microros_task(void *argument)
@@ -583,9 +591,9 @@ void microros_task(void *argument)
   rclc_executor_add_subscription(&executor, &subscriberMode, &str_msg1, &subscription_handle_speed, ON_NEW_DATA);
   rclc_executor_add_subscription(&executor, &subscriberMove, &str_msg2, &subscription_handle_command_and_speed, ON_NEW_DATA);
 
-  sensor_speed__msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
-  sensor_speed__msg.data.size = 0;
-  sensor_speed__msg.data.capacity = ARRAY_LEN;
+  sensor_speed_msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+  sensor_speed_msg.data.size = 0;
+  sensor_speed_msg.data.capacity = ARRAY_LEN;
 
   sensor_obs_msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
   sensor_obs_msg.data.size = 0;
@@ -601,13 +609,13 @@ void microros_task(void *argument)
 
   for(;;)
   {
-	  sprintf(sensor_speed__msg.data.data, "from STM32 : speed=#%d", (int32_t)speed);
-	  sensor_speed__msg.data.size = strlen(sensor_speed__msg.data.data);
+	  sprintf(sensor_speed_msg.data.data, "from STM32 : speed=#%d", (int32_t)speed);
+	  sensor_speed_msg.data.size = strlen(sensor_speed_msg.data.data);
 	  sprintf(sensor_obs_msg.data.data, "from STM32 : obstacle detected : #%d", (int32_t)obstacle_detected);
 	  sensor_obs_msg.data.size = strlen(sensor_obs_msg.data.data);
 
 	  // Publish sensor data
-	  rcl_ret_t pub_ret1 = rcl_publish(&publisherSpeed, &sensor_speed__msg, NULL);
+	  rcl_ret_t pub_ret1 = rcl_publish(&publisherSpeed, &sensor_speed_msg, NULL);
 	  rcl_ret_t pub_ret2 = rcl_publish(&publisherObstacle, &sensor_obs_msg, NULL);;
 
 	  if (pub_ret1 != RCL_RET_OK || pub_ret2 != RCL_RET_OK) {
