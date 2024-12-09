@@ -3,9 +3,12 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from sensor_msgs.msg import Image
 import sys
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QApplication,QSizePolicy,QSpacerItem, QMainWindow, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QHBoxLayout, QGridLayout
+import numpy as np
+from PyQt5.QtCore import QTimer,Qt
+from PyQt5.QtGui import QColor, QPixmap, QImage, QPen
+from PyQt5.QtWidgets import QGraphicsScene,QGraphicsView,QApplication,QSizePolicy,QSpacerItem, QMainWindow, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QHBoxLayout, QGridLayout
 
 ########################################################################
 
@@ -36,6 +39,7 @@ class MainWindow(QMainWindow):
                 border: none;
                 border-radius: 5px;
                 background-color: #0056b3;
+                margin-bottom: 3px;
             }
             QPushButton#btnUp { background-color: #4CAF50; color: white; }
             QPushButton#btnDown { background-color: #8A2BE2; color: white; }
@@ -59,13 +63,39 @@ class MainWindow(QMainWindow):
         self.obstacle_status = "Aucun"
 
         # Labels pour afficher les données du robot
-        self.wheel_speed_label = QLabel('Vitesse de rotation des roues: 0 tr/min', self)
-        self.wheel_speed_display=QLineEdit()
-        self.wheel_speed_display.setReadOnly(True)
+        # Vitesse de rotation des roues
+        self.wheel_speed_label = QLabel('Vitesse de rotation des roues (tr/min):', self)
 
-        self.robot_speed_label = QLabel('Vitesse du robot: m/s et km/h', self)
-        self.robot_speed_display=QLineEdit()
-        self.robot_speed_display.setReadOnly(True)
+        wheel_speed_layout = QHBoxLayout()
+        self.right_wheel_label = QLabel("Roue Droite: ")
+        self.right_wheel_speed = QLineEdit()
+        self.right_wheel_speed.setReadOnly(True)
+
+        self.left_wheel_label = QLabel("Roue Gauche: ")
+        self.left_wheel_speed = QLineEdit()
+        self.left_wheel_speed.setReadOnly(True)
+
+        wheel_speed_layout.addWidget(self.right_wheel_label)
+        wheel_speed_layout.addWidget(self.right_wheel_speed)
+        wheel_speed_layout.addWidget(self.left_wheel_label)
+        wheel_speed_layout.addWidget(self.left_wheel_speed)
+
+        # Vitesse de déplacement du robot
+        self.robot_speed_label = QLabel('Vitesse de déplacement du robot:', self)
+
+        robot_speed_layout = QHBoxLayout()
+        self.robot_speed_label_m = QLabel("En m/s: ")
+        self.robot_speed_displaym = QLineEdit()
+        self.robot_speed_displaym.setReadOnly(True)
+
+        self.robot_speed_label_km = QLabel("En km/h: ")
+        self.robot_speed_displaykm = QLineEdit()
+        self.robot_speed_displaykm.setReadOnly(True)
+
+        robot_speed_layout.addWidget(self.robot_speed_label_m)
+        robot_speed_layout.addWidget(self.robot_speed_displaym)
+        robot_speed_layout.addWidget(self.robot_speed_label_km)
+        robot_speed_layout.addWidget(self.robot_speed_displaykm)
 
         self.obstacle_label = QLabel('Présence d\'obstacle: ', self)
         self.obstacle_display=QLineEdit()
@@ -78,11 +108,17 @@ class MainWindow(QMainWindow):
         self.mode_combo.currentIndexChanged.connect(self.onModeChange)
 
         # Champ pour la saisie de la vitesse
+        speed_layout = QHBoxLayout()
         self.speed_label = QLabel('Entrez la vitesse :', self)
         self.speed_input = QLineEdit(self)
         self.speed_input.setPlaceholderText('Vitesse en m/s')
         self.send_speed_button = QPushButton('Envoyer la vitesse', self)
         self.send_speed_button.clicked.connect(self.onSendSpeed)
+
+        speed_layout.addWidget(self.speed_label)
+        speed_layout.addWidget(self.speed_input)
+        speed_layout.addWidget(self.send_speed_button)
+
 
         # Boutons de contrôle de mouvement
         self.movement_label = QLabel('Contrôle de Mouvement:')
@@ -109,16 +145,23 @@ class MainWindow(QMainWindow):
         self.btn_right.clicked.connect(lambda: self.send_movement_command("r"))
         self.btn_stop.clicked.connect(lambda: self.send_movement_command("s"))
 
-        # Disposition en grille pour les boutons de mouvement (comme une manette)
+        # Ajout de la vue de caméra
+        self.graphicsScene = QGraphicsScene()
+        self.graphicsView = QGraphicsView()
+        self.graphicsScene.setBackgroundBrush(QColor(255, 255, 255))
+        self.graphicsView.setScene(self.graphicsScene)
+        border_rect = self.graphicsScene.sceneRect()
+        border_pen = QPen(Qt.black, 3)
+        self.graphicsScene.addRect(border_rect, border_pen)
+        self.graphicsView.setFixedSize(320, 235)  # Taille fixe pour la vue caméra
+        self.qpixmap = QPixmap()
+
+        # Disposition en grille pour les boutons de mouvement 
         self.movement_layout.addWidget(self.btn_forward, 0, 1)  # Haut
         self.movement_layout.addWidget(self.btn_left, 1, 0)     # Gauche
         self.movement_layout.addWidget(self.btn_right, 1, 2)    # Droite
         self.movement_layout.addWidget(self.btn_backward, 2, 1) # Bas
-        self.movement_layout.addWidget(self.btn_stop, 1, 1) # Bas
-
-        input_layout = QHBoxLayout()
-        input_layout.addWidget(self.speed_label)
-        input_layout.addWidget(self.speed_input)
+        self.movement_layout.addWidget(self.btn_stop, 1, 1) # Stop
 
         spacer = QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -126,16 +169,27 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.mode_label)
         main_layout.addWidget(self.mode_combo)
+        main_layout.addSpacing(2)
+        main_layout.addWidget(self.graphicsView)
         main_layout.addItem(spacer)
-        main_layout.addLayout(input_layout)
-        main_layout.addWidget(self.send_speed_button)
+        main_layout.addLayout(speed_layout)
+        main_layout.addSpacing(10)
         main_layout.addWidget(self.wheel_speed_label)
-        main_layout.addWidget(self.wheel_speed_display)
+        main_layout.addLayout(wheel_speed_layout)
+        main_layout.addSpacing(10)
+        #main_layout.addWidget(self.right_wheel_speed)
+        #main_layout.addWidget(self.left_wheel_speed)
         main_layout.addWidget(self.robot_speed_label)
-        main_layout.addWidget(self.robot_speed_display)
+        main_layout.addLayout(robot_speed_layout)
+        main_layout.addSpacing(10)
+        #main_layout.addWidget(self.robot_speed_displaym)
+        #main_layout.addWidget(self.robot_speed_displaykm)
         main_layout.addWidget(self.obstacle_label)
         main_layout.addWidget(self.obstacle_display)
+        main_layout.addSpacing(10)
         main_layout.addLayout(self.movement_layout)
+
+        main_layout.setContentsMargins(15, 15, 15, 15)
 
         # Configuration du widget principal
         widget = QWidget()
@@ -151,6 +205,7 @@ class MainWindow(QMainWindow):
         # Subscriptions for robot data
         self.subscription_speed = self.node.create_subscription(String, '/sensor/motor_speed', self.movement_speed_callback, 10)
         self.subscription_obstacle = self.node.create_subscription(String, '/sensor/receive_obstacle', self.obstacle_callback, 10)
+        self.subscription_camera = self.node.create_subscription(Image, '/camera/src_frame', self.img_callback, 10)
 
         # Timer pour les événements ROS
         self.timer = QTimer()
@@ -218,17 +273,33 @@ class MainWindow(QMainWindow):
         """
         message_text = msg.data
         print(f"Message reçu : {message_text}")
+
+        # Diamètre de la roue en m
+        D = 0.098
         
         try:
             # Extraction de la vitesse après "speed=#"
-            speed_str = message_text.split("speed=#")[1]
-                
-            # Conversion de la chaîne en valeur flottante
-            speed = float(speed_str.strip())
-                
-            # Mise à jour de l'affichage dans l'interface utilisateur
-            self.robot_speed_display.setText(f'{speed:.2f} m/s')
+            left_speed_str = message_text.split("speedL=#")[1].split(",")[0]
+            right_speed_str = message_text.split("speedR=#")[1]
 
+            # Conversion de la chaîne en valeur flottante
+            speedR = float(right_speed_str.strip())
+            speedL = float(left_speed_str.strip())
+
+            # Calcul de la vitesse moyenne en tr/min
+            average_speed = (speedL + speedR) / 2
+
+            # Calcul de la vitesse moyenne en km/h
+            average_speed_km = average_speed * np.pi * D / 1000 * 60
+            average_speed_m = average_speed_km / 3.6
+
+            # Mise à jour de l'affichage dans l'interface utilisateur
+            self.right_wheel_speed.setText(f'{speedR:.2f} tr/min')
+            self.left_wheel_speed.setText(f'{speedL:.2f} tr/min')
+            self.robot_speed_displaykm.setText(f'{average_speed_km:.2f} km/h')
+            self.robot_speed_displaym.setText(f'{average_speed_m:.2f} m/s')
+
+            
         except (IndexError, ValueError) as e:
             # Gestion des erreurs d'index ou de conversion
             print(f"Erreur lors de l'analyse des données de vitesse : {e}")
@@ -249,6 +320,10 @@ class MainWindow(QMainWindow):
         elif obstacle == 2:
             self.obstacle_display.setText("Obstacle derrière")
 
+    def img_callback(self, img):
+        image = QImage(img.data, img.width, img.height, QImage.Format_RGB888)
+        self.graphicsScene.clear()
+        self.graphicsScene.addPixmap(self.qpixmap.fromImage(image))
 
     def onTimerTick(self):
         rclpy.spin_once(self.node,timeout_sec=0.1)

@@ -65,60 +65,6 @@ void motorRight_SetDuty(int duty)
 	__HAL_TIM_SetCompare(&TimHandle, TIM_CHANNEL_2, duty);
 }
 //=================================================================
-
-/* N.B: centrer le rapport cyclique
-ce qui place les moteurs au repos si duty = 100 */
-
-void onMoveForward(int index,int consigne) {
-	if(index==1){
-		motorRight_SetDuty(consigne+100);
-	}
-	else if(index==2){
-		motorLeft_SetDuty(consigne+100);
-	}
-    robot_state = MOVING_FORWARD;
-}
-
-void onMoveBackward(int index,int consigne) {
-	if(index==1){
-		motorRight_SetDuty(-(consigne+100));
-	}
-	else if(index==2){
-		motorLeft_SetDuty(-(consigne+100));
-	}
-    robot_state = MOVING_BACKWARD;
-}
-
-void onMoveLeft(int index, int consigne) {
-    if(index==1){
-   		motorRight_SetDuty(consigne+100);
-    }
-   	else if(index==2){
-   		motorLeft_SetDuty(-(consigne+100));
-   	}
-    robot_state = TURNING_LEFT;
-}
-
-void onMoveRight(int index, int consigne) {
-    if(index==1){
-   		motorRight_SetDuty(-(consigne+100));
-   	}
-   	else if(index==2){
-    	motorLeft_SetDuty(consigne+100);
-   	}
-    robot_state = TURNING_RIGHT;
-}
-
-void stopMoving(int index) {
-	if(index==1){
-		motorRight_SetDuty(100);
-	}
-	else if(index==2){
-		motorLeft_SetDuty(100);
-	}
-    robot_state = STOPPED;
-}
-
 /**
  * @brief Détecte la présence d'un obstacle à l'avant.
  *
@@ -218,3 +164,16 @@ void get_vitess(char c) {
         vitess_send = vitess_send * 10 + (c - '0');
     }
 }
+
+void get_xy(char *buffer, float *result) {
+    if (buffer != NULL && result != NULL) {
+        char *part1 = strtok(buffer, ",");
+        char *part2 = strtok(NULL, ",");
+
+        if (part1 != NULL && part2 != NULL) {
+            result[0] = atof(part1);
+            result[1] = atof(part2);
+        }
+    }
+}
+

@@ -7,7 +7,7 @@
 
 #define ARRAY_LEN 100
 #define SAMPLING_PERIOD_ms 5
-#define FIND_MOTOR_INIT_POS 1
+#define FIND_MOTOR_INIT_POS 0
 
 //################################################
 #define EX1 1
@@ -79,6 +79,9 @@ int speed;
 int obstacle_detected ;
 char command_received ;
 int speed_received ;
+int w_cam = 1335;
+int h_cam = 235;
+
 
 int speed_L=0; // vitesse roue gauche
 // Fonction de contrôle pour la roue gauche
@@ -120,14 +123,7 @@ static void control_motorLeft(void *pvParameters)
 		proportionalComponent_L=Kp_L*(float)err_L;
 		integralComponent_L=integralComponent_L+Kp_L*Ki_L*(float)err_L;
 		commande = (int)(proportionalComponent_L+integralComponent_L);
-
-		if(pxLMessage.command=='s'){
-			stopMoving(2);
-		}else {
-			motorLeft_SetDuty(commande+100);
-		}
-
-		speed=speed_L;
+		motorLeft_SetDuty(commande+100);
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
 	}
@@ -173,14 +169,7 @@ static void control_motorRight(void *pvParameters)
 		proportionalComponent_R=Kp_R*(float)err_R;
 		integralComponent_R=integralComponent_R+Kp_R*Ki_R*(float)err_R;
 		commande = (int)(proportionalComponent_R+integralComponent_R);
-
-		if(pxRMessage.command=='s'){
-			stopMoving(1);
-		}else {
-			motorRight_SetDuty(commande+100);
-		}
-
-		speed=speed_R;
+		motorRight_SetDuty(commande+100);
 		// Libère un sémaphore
 		xSemaphoreGive( xSemaphore );
 	}
@@ -209,6 +198,7 @@ static void obstacleDetectionTask(void *pvParameters)
                 // Obstacle détecté à l'avant
                 //printf("Mode Manuel:\nObstacle Avant");
                 pxMessage.command = 's'; // Stop
+                pxMessage.data = 0;
                 obstacle_detected = 1;
             }
             else if (rearObstacle)
@@ -216,29 +206,13 @@ static void obstacleDetectionTask(void *pvParameters)
                 // Obstacle détecté à l'arrière
                 //printf("Mode Manuel:\nObstacle Arrière");
                 pxMessage.command = 's'; // Stop
+                pxMessage.data = 0;
                 obstacle_detected = 2;
             }
             else
             {
             	pxMessage.command = command_received;
             	pxMessage.data = speed_received;
-            	/*if (command_received == 'f') {
-            		pxMessage.command = command_received;
-            		pxMessage.data = speed_received; // Speed forward
-        		} else if (command_received == 'b') {
-        			pxMessage.command = command_received;
-            		pxMessage.data = speed_received; // Speed backward (can be the same or different)
-            	} else if (command_received == 'l') {
-            		pxMessage.command = command_received;
-            		pxMessage.data = speed_received; // Speed for turning (could be different)
-
-            	} else if (command_received == 'r') {
-            		pxMessage.command = command_received;
-            		pxMessage.data = speed_received; // Speed for turning (could be different)
-            	else {
-            		pxMessage.command = 's';  // Stop command
-            		pxMessage.data = 0;  // No speed
-            	}*/
             }
         }
 
@@ -253,13 +227,13 @@ static void obstacleDetectionTask(void *pvParameters)
                 {
                     //printf("côté gauche.\n");
                     pxMessage.command = 'r'; // Tourner à droite
-                    pxMessage.data = 200;   // Vitesse de rotation
+                    pxMessage.data = 150;   // Vitesse de rotation
                 }
                 else if (frontObstacle == 1)
                 {
                     //printf("côté droit.\n");
                     pxMessage.command = 'l'; // Tourner à gauche
-                    pxMessage.data = 200;    // Vitesse de rotation
+                    pxMessage.data = 150;    // Vitesse de rotation
                 }
                 obstacle_detected = 1;
             }
@@ -267,7 +241,8 @@ static void obstacleDetectionTask(void *pvParameters)
             {
                 // Obstacle détecté à l'arrière : avancer
                 //printf("Mode Aléatoire:\nObstacle Arrière");
-                pxMessage.command = 's'; // Stop
+                pxMessage.command = 'f';
+                pxMessage.data = 200;// Vitesse réduite pour éviter un choc
                 obstacle_detected = 2;
             }
             else
@@ -275,27 +250,54 @@ static void obstacleDetectionTask(void *pvParameters)
                 // Pas d'obstacle : avancer aléatoirement
                 pxMessage.command = 'f'; // Avancer
                 pxMessage.data = 300;    // Vitesse d'avance
+
+                /* Pas d'obstacle : avancer de manière fluide et aléatoire
+                if (rand() % 2 == 0)
+                {
+                    pxMessage.command = 'f'; // Avancer
+                    pxMessage.data = 300;
+                }
+                else
+                {
+                    pxMessage.command = (rand() % 2 == 0) ? 'l' : 'r'; // Légère variation gauche/droite
+                    pxMessage.data = 100; // Vitesse réduite pour la variation
+                }*/
             }
         }
 
-        /* Mode Tracking
+        // Mode Tracking
         else if (currentMode == 2)
         {
-            if (obstacle_detected_forward)
-            {
-                // Obstacle détecté à l'avant : s'arrêter
-                groveLCD_clear();
-                groveLCD_term_printf("Mode Tracking:\nObstacle Avant");
-                pxMessage.command = 's'; // Stop
+        	if (frontObstacle >= 0) {
+        			pxMessage.command = 's';
+        			pxMessage.data =0;
+					obstacle_detected = 1;
+			} else if (rearObstacle) {
+				pxMessage.command = 's';
+				pxMessage.data =0;
+				obstacle_detected = 2;
+			}
+            if (values_xy[0] == 0 && values_xy[1] == 0) {
+                pxMessage.command = 's';
+                pxMessage.data = 0;
             }
-            else
-            {
-                // Suivre la couleur détectée par la caméra
-                int trackingCommand = detectAndTrackColor(); // Fonction pour détecter et suivre une couleur
-                pxMessage.command = trackingCommand;         // Commande basée sur la couleur détectée
-                pxMessage.data = 200;                        // Vitesse associée au tracking
+            // Move forward condition
+            else if (values_xy[0] > (w_cam / 2 - 120) && values_xy[0] < (w_cam / 2 + 120)) {
+                pxMessage.command = 'f';
+                pxMessage.data = 300;
             }
-        }*/
+            // Move right condition (if values_xy[0] is more than halfway of w_cam)
+            else if (values_xy[0] > w_cam / 2) {
+                pxMessage.command = 'r';
+                pxMessage.data = 100;
+            }
+            // Move left condition (if values_xy[0] is less than halfway of w_cam)
+            else {
+                pxMessage.command = 'l';
+                pxMessage.data = 100;
+            }
+
+        }
 
         // Commandes pour les moteurs gauche et droit
         xQueueSend(qhL, (void *)&pxMessage, portMAX_DELAY); // Commande moteur gauche
@@ -538,6 +540,13 @@ void subscription_handle_command_and_speed(const void * msgin)
     printf("Received Command and Speed Data from HOST: %d\n\r",speed_received);
 }
 
+void subscription_camera_callback(const void * msgin)
+{
+  const std_msgs__msg__String * msg = (const std_msgs__msg__String *)msgin;
+  get_xy(msg->data.data, values_xy);
+}
+
+
 void microros_task(void *argument)
 {
   rmw_uros_set_custom_transport( true, (void *) &huart1, cubemx_transport_open,  cubemx_transport_close,  cubemx_transport_write, cubemx_transport_read);
@@ -585,11 +594,16 @@ void microros_task(void *argument)
   std_msgs__msg__String str_msg2;
   rclc_subscription_init_default(&subscriberMove,&node,ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/command/move");
 
+  rcl_subscription_t subscriberCamera;
+  std_msgs__msg__String str_msg3;
+  rclc_subscription_init_default(&subscriberCamera,&node,ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),"/camera/src_xy");
+
   // Add subscription to the executor
   rclc_executor_t executor;
   rclc_executor_init(&executor, &support.context, 2, &allocator); // ! 'NUMBER OF HANDLES' A MODIFIER EN FONCTION DU NOMBRE DE TOPICS
   rclc_executor_add_subscription(&executor, &subscriberMode, &str_msg1, &subscription_handle_speed, ON_NEW_DATA);
   rclc_executor_add_subscription(&executor, &subscriberMove, &str_msg2, &subscription_handle_command_and_speed, ON_NEW_DATA);
+  rclc_executor_add_subscription(&executor, &subscriberCamera, &str_msg3, &subscription_camera_callback, ON_NEW_DATA);
 
   sensor_speed_msg.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
   sensor_speed_msg.data.size = 0;
@@ -607,9 +621,13 @@ void microros_task(void *argument)
   str_msg2.data.size = 0;
   str_msg2.data.capacity = ARRAY_LEN;
 
+  str_msg3.data.data = (char * ) malloc(ARRAY_LEN * sizeof(char));
+  str_msg3.data.size = 0;
+  str_msg3.data.capacity = ARRAY_LEN;
+
   for(;;)
   {
-	  sprintf(sensor_speed_msg.data.data, "from STM32 : speed=#%d", (int32_t)speed);
+	  sprintf(sensor_speed__msg.data.data, "speedL=#%d , speedR=#%d", (int32_t)speed_L,(int32_t)speed_R);
 	  sensor_speed_msg.data.size = strlen(sensor_speed_msg.data.data);
 	  sprintf(sensor_obs_msg.data.data, "from STM32 : obstacle detected : #%d", (int32_t)obstacle_detected);
 	  sensor_obs_msg.data.size = strlen(sensor_obs_msg.data.data);

@@ -1,0 +1,26 @@
+[1.632s] Invoking command in '/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/src/py_ihm': PYTHONPATH=/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/prefix_override:/home/douae/.local/lib/python3.10/site-packages/colcon_core/task/python/colcon_distutils_commands:/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/py_ihm build --build-base /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/build install --record /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/install.log --single-version-externally-managed install_data
+[1.926s] /home/douae/.local/lib/python3.10/site-packages/setuptools/_distutils/dist.py:261: UserWarning: Unknown distribution option: 'tests_require'
+[1.927s]   warnings.warn(msg)
+[2.133s] running egg_info
+[2.166s] writing ../../build/py_ihm/py_ihm.egg-info/PKG-INFO
+[2.167s] writing dependency_links to ../../build/py_ihm/py_ihm.egg-info/dependency_links.txt
+[2.167s] writing entry points to ../../build/py_ihm/py_ihm.egg-info/entry_points.txt
+[2.168s] writing requirements to ../../build/py_ihm/py_ihm.egg-info/requires.txt
+[2.168s] writing top-level names to ../../build/py_ihm/py_ihm.egg-info/top_level.txt
+[2.235s] reading manifest file '../../build/py_ihm/py_ihm.egg-info/SOURCES.txt'
+[2.237s] writing manifest file '../../build/py_ihm/py_ihm.egg-info/SOURCES.txt'
+[2.238s] running build
+[2.238s] running build_py
+[2.239s] copying py_ihm/py_ihm.py -> /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/build/lib/py_ihm
+[2.241s] running install
+[2.249s] running install_lib
+[2.282s] copying /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/build/lib/py_ihm/py_ihm.py -> /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/python3.10/site-packages/py_ihm
+[2.283s] byte-compiling /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/python3.10/site-packages/py_ihm/py_ihm.py to py_ihm.cpython-310.pyc
+[2.287s] running install_data
+[2.289s] running install_egg_info
+[2.325s] removing '/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/python3.10/site-packages/py_ihm-0.0.0-py3.10.egg-info' (and everything under it)
+[2.326s] Copying ../../build/py_ihm/py_ihm.egg-info to /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/python3.10/site-packages/py_ihm-0.0.0-py3.10.egg-info
+[2.329s] running install_scripts
+[2.576s] Installing ihm_ros2 script to /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/py_ihm
+[2.577s] writing list of installed files to '/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/install.log'
+[2.647s] Invoked command in '/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/src/py_ihm' returned '0': PYTHONPATH=/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/prefix_override:/home/douae/.local/lib/python3.10/site-packages/colcon_core/task/python/colcon_distutils_commands:/home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/install/py_ihm/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/py_ihm build --build-base /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/build install --record /home/douae/ENIB/SEN/Projet_Robot/pyqt_ihm_ros2_ws/build/py_ihm/install.log --single-version-externally-managed install_data
