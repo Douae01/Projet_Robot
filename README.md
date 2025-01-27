@@ -6,11 +6,33 @@
 - **Mode Aléatoire** : Le robot se déplace librement en changeant régulièrement de direction, tout en détectant et en évitant les obstacles.
 - **Mode Suivi (Tracking)** : Le robot suit une cible de couleur détectée par la caméra.
 
-
 ## Composants utilisés dans ce projet
 
-- **STM32 Nucleo F411** : responsable sur la gestion de la commande des moteurs en boucle fermée, l'acquisition des capteurs de distance, l'affichage sur l'écran LCD (Mode de fonctionnement 'Manuel/Aléatoire/Suivi') et la communication avec le Raspberry Pi.
+- **STM32 Nucleo F411** : Responsable de la gestion de la commande des moteurs en boucle fermée, l'acquisition des données des capteurs de distance, l'affichage sur l'écran LCD (mode de fonctionnement : 'Manuel/Aléatoire/Suivi') et la communication avec le Raspberry Pi.
+  
+- **Raspberry Pi** : Permet l'acquisition et le traitement de l'image via la Webcam et communique avec le PC par WiFi.
 
-- **Raspberry Pi** : permettant l'acquisition de l'image de la Webcam, le traitement de l'image de la Webcam et la communication avec le PC via la liaison WIFI.
+- **IHM (Interface Homme-Machine)** :  
+  - Mise en place pour définir les modes de fonctionnement du robot (Manuel, Aléatoire, Suivi).
+  - Transmet les ordres de direction et de vitesse au robot.
+  - Affiche la valeur des capteurs (comme les vitesses des roues et la vitesse du robot).
+  - Intègre un flux vidéo en direct capturé par la Webcam du robot.
 
-- **IHM** : mise en place pour définir les modes de fonctionnement du robot, transmettre les ordres de direction et de vitesse, afficher la valeur des capteurs et l'image de la Webcam.
+## Schéma général du projet
+
+Voici une vue d'ensemble des composants et des connexions du projet :  
+![Schéma des connexions](./schema.png)
+
+## Aperçu de l'IHM
+
+L'IHM permet de piloter et de surveiller le fonctionnement du robot :  
+- Sélection du mode de fonctionnement (Manuel, Aléatoire, Suivi).
+- Envoi de la vitesse souhaitée en m/s.
+- Affichage des vitesses des roues (droite et gauche) en tr/min.
+- Affichage de la vitesse de déplacement en m/s et km/h.
+- Indication de la présence ou non d'obstacles.
+- Commandes de direction : Avancer, Reculer, Gauche, Droite, Stop.
+- Flux vidéo en temps réel depuis la Webcam.
+
+![Aperçu de l'IHM](./ihm.jpg)
+
